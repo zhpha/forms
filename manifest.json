@@ -1,0 +1,25 @@
+{
+    "manifest_version": 2,
+    "name": "表单模板插件",
+    "version": "1.0",
+    "description": "把页面内填写好的表单保存为模板，然后用保存好的模板一键填写表单，省去重复填表的烦恼。 ",
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ]
+        }
+    ],
+    "icon": "icon.png",
+    "permissions": [
+        "activeTab"
+    ],
+    "browser_action": {
+        "default_icon": "icon.png",
+        "default_title": "表单模板插件",
+        "default_popup": "popup.html"
+    }
+}
