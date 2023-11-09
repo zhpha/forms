@@ -8,6 +8,9 @@ document.getElementById("log").addEventListener("click", function () {
 document.getElementById("fanhui").addEventListener("click", function () {
     showdiv("div1");
 });
+document.getElementById("btn4").addEventListener("click", function () {
+    showdiv("div1");
+});
 
 function showdiv(id) {
     document.getElementById("div1").style.display = "none";
@@ -183,6 +186,45 @@ function edit(data) {
             divtxt.textContent = item.value;
         } else {
             divtxt.innerHTML = "<color style='color:red'>未填写</color>";
+        }
+        if ((item.tag == "INPUT" && item.type != "radio" && item.type != "checkbox" && item.type != "hidden") || item.tag == "TEXTAREA") {
+            var suijiinput = document.createElement("input");
+            suijiinput.type = "text";
+            suijiinput.classList.add("inputtxt");
+            suijiinput.placeholder = "使用此内容填充，多个内容用英文逗号分隔，填充时会随机选择一个";
+            suijiinput.title = "使用此内容填充，多个内容用英文逗号分隔，填充时会随机选择一个";
+            if (item.suiji && item.suiji.length) {
+                suijiinput.value = item.suiji.join(",");
+            }
+            suijiinput.setAttribute("data", key);
+            divtxt.appendChild(suijiinput);
+            suijiinput.addEventListener("change", function (e) {
+                var key = e.target.getAttribute("data");
+                var item = cache[key];
+
+                try {
+                    var v = e.target.value;
+                    //去掉首尾空格
+                    v = v.replace(/(^\s*)|(\s*$)/g, "");
+                    if (!v) {
+                        item.suiji = [];
+                        suijiinput.value = "";
+                        return;
+                    }
+                    v = v.split(",");
+                    item.suiji = v;
+
+
+                } catch (e) {
+                    item.suiji = [];
+                    alert("输入内容格式错误");
+                    return;
+                }
+                item.suiji = item.suiji.filter(function (item) { return !!item; });
+
+                //cache[key] = item;
+            });
+
         }
 
         var divbtn = document.createElement("div");

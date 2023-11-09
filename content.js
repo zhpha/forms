@@ -113,7 +113,13 @@ function fillForm(form, template) {
                             input.value = item.value;
                         }
                     } else {
-                        input.value = item.value;
+                        if (item.suiji && item.suiji.length) {
+                            //从列表里随机取一个
+                            var index = Math.floor(Math.random() * item.suiji.length);
+                            input.value = item.suiji[index];
+                        } else {
+                            input.value = item.value;
+                        }
                     }
 
                 } else {
