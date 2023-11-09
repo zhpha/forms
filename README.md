@@ -21,14 +21,4 @@
 
 - 插件目前仅支持部分表单类型，不支持复杂表单
 - 模板保存在本地，不会上传到云端
-// FILEPATH: browser-plugin.js
 
-// This is a browser plugin that saves filled-out forms on a webpage as templates, 
-// and allows users to fill out the same form with one click using the saved templates. 
-// This saves users the hassle of repeatedly filling out the same form. 
-
-// To use this plugin, simply install it in your browser and click the "Save as Template" button 
-// after filling out a form. To fill out the same form again, click the "Fill with Template" button 
-// and select the saved template you want to use. 
-
-// For more information, please refer to the README file.
