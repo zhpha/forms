@@ -3,92 +3,283 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
     <style>
+        /* 全局重置与基础样式 */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: #333;
+            margin: 0;
+            padding: 16px;
+            min-width: 320px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
         ul {
             list-style: none;
-        }
-
-        .desc {
-            margin: 10px 0;
-
-            line-height: 20px;
-            overflow: hidden;
-        }
-
-        .desctitle {
-            font-weight: bold;
-        }
-
-        .desctxt {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        ul {
             padding: 0;
             margin: 0;
         }
 
-        li {
-            margin: 10px 0;
+        /* 标题样式 */
+        .title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #5f6368;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 20px 0 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
 
-            line-height: 20px;
-            overflow: hidden;
-            border-bottom: solid 1px #efefef;
-            padding: 5px;
+        /* 按钮通用样式 */
+        button {
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            outline: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* 列表项中的按钮组容器 */
+        .btns {
+            display: flex;
+            gap: 8px;
+            /* 按钮之间的间距 */
+            margin-top: 10px;
+        }
+
+        /* 列表项中的按钮样式 */
+        .btns button {
+            flex: 1;
+            /* 按钮平分宽度 */
+            padding: 6px 12px;
+            font-size: 12px;
+            background-color: #f1f3f4;
+            color: #3c4043;
+            border: 1px solid transparent;
+        }
+
+        .btns button:hover {
+            background-color: #e8eaed;
+            color: #202124;
+        }
+
+        /* 填充按钮特殊样式 */
+        .btns button:first-child {
+            background-color: #e8f0fe;
+            color: #1967d2;
+        }
+
+        .btns button:first-child:hover {
+            background-color: #d2e3fc;
+        }
+
+        /* 删除按钮特殊样式 */
+        .btns button:last-child {
+            color: #d93025;
+        }
+
+        .btns button:last-child:hover {
+            background-color: #fce8e6;
+        }
+
+        /* 主按钮 (保存模板, 保存) */
+        #log,
+        #btn3 {
+            background-color: #007bff;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+            width: 100%;
+            /* 在主界面让按钮宽一点 */
+        }
+
+        #div3 #btn3 {
+            width: auto;
+            /* 编辑页按钮恢复自适应 */
+        }
+
+        #log:hover,
+        #btn3:hover {
+            background-color: #0069d9;
+            box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+        }
+
+        /* 次级按钮 (返回, 取消) */
+        #fanhui,
+        #btn4 {
+            background-color: #fff;
+            color: #495057;
+            border: 1px solid #ced4da;
+        }
+
+        #fanhui:hover,
+        #btn4:hover {
+            background-color: #f8f9fa;
+            border-color: #adb5bd;
+            color: #212529;
+        }
+
+        /* 列表项卡片样式 */
+        li {
+            background-color: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
         li:hover {
-            background-color: #f5f5f5;
+            border-color: #007bff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
         }
 
-        .title {
-            margin: 5px 0;
-            font-weight: bold;
-            padding: 5px 0;
-            border-bottom: solid 1px black;
+        /* 详情页面的描述文本 */
+        .desc {
+            margin: 8px 0;
+            color: #666;
+            font-size: 13px;
         }
 
-        .btns {
+        /* 编辑页面的输入框容器 */
+        .divbtn {
             display: flex;
-            justify-content: space-around;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        /* 复选框样式 */
+        input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: #007bff;
+        }
+
+        /* 文本输入框样式 */
+        input[type="text"].inputtxt {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #3c4043;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            margin-top: 8px;
+            display: block;
+        }
+
+        input[type="text"].inputtxt:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+            outline: none;
+        }
+
+        .desctitle {
+            font-weight: 600;
+            color: #333;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .desctxt {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: Consolas, Monaco, "Courier New", monospace;
+            font-size: 12px;
+            border: 1px solid #eee;
+            color: #444;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        /* 固定头部样式 */
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            border-bottom: 1px solid #e1e4e8;
+            padding: 12px 16px;
+            display: flex;
+            gap: 10px;
+            margin: -16px -16px 16px -16px;
+            /* 抵消 body padding */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
     </style>
 
 </head>
 
-<body style="min-width: 200px;">
-
-
+<body>
 
     <div id="div1">
-        <button id="log">保存模板</button>
+        <button id="log">查找表单</button>
         <p class="title">已保存的表单</p>
         <ul id="list">
-            <li>未保存表单</li>
+            <li style="text-align: center; color: #999; border: 1px dashed #ccc; box-shadow: none;">未保存表单</li>
         </ul>
     </div>
 
-
-    </ul>
     <div id="div2" style="display: none;">
-        <button id="fanhui">&lt;返回</button>
+        <div style="margin-bottom: 10px;">
+            <button id="fanhui" style="padding: 6px 12px; font-size: 12px;">&lt; 返回</button>
+        </div>
         <p class="title">当前页面找到的表单</p>
         <ul id="list2">
-            <li>未在页面上发现表单</li>
+            <li style="text-align: center; color: #999; border: 1px dashed #ccc; box-shadow: none;">未在页面上发现表单</li>
         </ul>
     </div>
-    <div id="div3" style="display: none; ">
-        <div
-            style="position: fixed;height: 29px;width: 100%;background-color: white;top: 0;padding: 10px 0;border-bottom: solid 1px black;">
+
+    <div id="div3" style="display: none;">
+        <div class="sticky-header">
             <button id="btn3">保存</button>
             <button id="btn4">取消</button>
         </div>
-        <ul id="list3" style="margin-top:50px;">
+        <ul id="list3">
 
         </ul>
-
     </div>
-
 
     <script src="popup.js"></script>
 </body>
