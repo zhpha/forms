@@ -16,6 +16,7 @@ function showdiv(id) {
     document.getElementById("div1").style.display = "none";
     document.getElementById("div2").style.display = "none";
     document.getElementById("div3").style.display = "none";
+    document.getElementById("div4").style.display = "none";
     document.getElementById(id).style.display = "block";
 }
 var cache = {};
@@ -359,4 +360,192 @@ document.onload = function () {
     console.log('onload' + new Date().getTime());
 
 }
+
+// Import/Export functionality
+
+// Helper function to compress data using gzip
+async function compressData(data) {
+    const blob = new Blob([data], { type: 'application/json' });
+    const stream = blob.stream();
+    const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
+    const compressedBlob = await new Response(compressedStream).blob();
+    return compressedBlob;
+}
+
+// Helper function to decompress gzip data
+async function decompressData(compressedBlob) {
+    const stream = compressedBlob.stream();
+    const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
+    const decompressedBlob = await new Response(decompressedStream).blob();
+    const text = await decompressedBlob.text();
+    return text;
+}
+
+// Export button handler
+document.getElementById("exportBtn").addEventListener("click", function () {
+    var list = localStorage.list;
+    if (!list || JSON.parse(list).length === 0) {
+        alert("没有可导出的模板");
+        return;
+    }
+    showExportDialog();
+});
+
+// Show export dialog with template selection
+function showExportDialog() {
+    var list = localStorage.list;
+    if (list) {
+        list = JSON.parse(list);
+        var exportList = document.getElementById("exportList");
+        exportList.innerHTML = "";
+        
+        for (var i = 0; i < list.length; i++) {
+            var li = document.createElement("li");
+            var label = document.createElement("label");
+            label.style.display = "flex";
+            label.style.alignItems = "center";
+            label.style.cursor = "pointer";
+            
+            var checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = true;
+            checkbox.classList.add("export-checkbox");
+            checkbox.setAttribute("data-key", list[i].key);
+            
+            var span = document.createElement("span");
+            span.textContent = list[i].title;
+            span.style.marginLeft = "8px";
+            
+            label.appendChild(checkbox);
+            label.appendChild(span);
+            li.appendChild(label);
+            exportList.appendChild(li);
+        }
+        
+        showdiv("div4");
+    }
+}
+
+// Select all checkbox handler
+document.getElementById("selectAllCheckbox").addEventListener("change", function (e) {
+    var checkboxes = document.querySelectorAll(".export-checkbox");
+    for (var i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = e.target.checked;
+    }
+});
+
+// Export confirm button handler
+document.getElementById("exportConfirmBtn").addEventListener("click", async function () {
+    var checkboxes = document.querySelectorAll(".export-checkbox");
+    var selectedKeys = [];
+    
+    for (var i = 0; i < checkboxes.length; i++) {
+        if (checkboxes[i].checked) {
+            selectedKeys.push(checkboxes[i].getAttribute("data-key"));
+        }
+    }
+    
+    if (selectedKeys.length === 0) {
+        alert("请至少选择一个模板");
+        return;
+    }
+    
+    var list = localStorage.list;
+    if (list) {
+        list = JSON.parse(list);
+        var selectedTemplates = list.filter(function (item) {
+            return selectedKeys.indexOf(item.key) !== -1;
+        });
+        
+        try {
+            var jsonData = JSON.stringify(selectedTemplates);
+            var compressedBlob = await compressData(jsonData);
+            
+            // Create download link
+            var url = URL.createObjectURL(compressedBlob);
+            var a = document.createElement("a");
+            a.href = url;
+            var timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            a.download = "form-templates-" + timestamp + ".gz";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert("导出成功！共导出 " + selectedTemplates.length + " 个模板");
+            showdiv("div1");
+        } catch (e) {
+            console.error(e);
+            alert("导出失败：" + e.message);
+        }
+    }
+});
+
+// Export cancel button handler
+document.getElementById("exportCancelBtn").addEventListener("click", function () {
+    showdiv("div1");
+});
+
+// Import button handler
+document.getElementById("importBtn").addEventListener("click", function () {
+    document.getElementById("importFile").click();
+});
+
+// Import file handler
+document.getElementById("importFile").addEventListener("change", async function (e) {
+    var file = e.target.files[0];
+    if (!file) {
+        return;
+    }
+    
+    if (!file.name.endsWith('.gz')) {
+        alert("请选择 .gz 格式的文件");
+        e.target.value = "";
+        return;
+    }
+    
+    try {
+        var decompressedData = await decompressData(file);
+        var importedTemplates = JSON.parse(decompressedData);
+        
+        if (!Array.isArray(importedTemplates)) {
+            throw new Error("无效的数据格式");
+        }
+        
+        var list = localStorage.list;
+        if (list) {
+            list = JSON.parse(list);
+        } else {
+            list = [];
+        }
+        
+        var importCount = 0;
+        for (var i = 0; i < importedTemplates.length; i++) {
+            var template = importedTemplates[i];
+            // Check if template with same key already exists
+            var exists = list.some(function (item) {
+                return item.key === template.key;
+            });
+            
+            if (!exists) {
+                list.push(template);
+                importCount++;
+            } else {
+                // Generate new key for duplicate
+                template.key = getCacheKey() + "_imported";
+                list.push(template);
+                importCount++;
+            }
+        }
+        
+        localStorage.list = JSON.stringify(list);
+        alert("导入成功！共导入 " + importCount + " 个模板");
+        init();
+    } catch (e) {
+        console.error(e);
+        alert("导入失败：" + e.message);
+    }
+    
+    e.target.value = "";
+});
 
