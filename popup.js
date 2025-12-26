@@ -461,8 +461,10 @@ document.getElementById("exportConfirmBtn").addEventListener("click", async func
     var list = localStorage.list;
     if (list) {
         list = JSON.parse(list);
+        // Convert to Set for O(1) lookup performance
+        var selectedKeysSet = new Set(selectedKeys);
         var selectedTemplates = list.filter(function (item) {
-            return selectedKeys.indexOf(item.key) !== -1;
+            return selectedKeysSet.has(item.key);
         });
         
         try {
@@ -473,6 +475,7 @@ document.getElementById("exportConfirmBtn").addEventListener("click", async func
             var url = URL.createObjectURL(compressedBlob);
             var a = document.createElement("a");
             a.href = url;
+            // Remove milliseconds (.000) and timezone (Z) from ISO timestamp
             var timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/\.\d{3}Z$/, '');
             a.download = "form-templates-" + timestamp + ".gz";
             document.body.appendChild(a);
@@ -527,21 +530,23 @@ document.getElementById("importFile").addEventListener("change", async function 
             list = [];
         }
         
+        // Create Set of existing keys for O(1) lookup performance
+        var existingKeysSet = new Set(list.map(function(item) { return item.key; }));
+        
         var importCount = 0;
         for (var i = 0; i < importedTemplates.length; i++) {
             var template = importedTemplates[i];
-            // Check if template with same key already exists
-            var existingKeys = list.map(function(item) { return item.key; });
             var newKey = template.key;
             var counter = 1;
             
             // Keep generating new keys until we find one that doesn't exist
-            while (existingKeys.indexOf(newKey) !== -1) {
+            while (existingKeysSet.has(newKey)) {
                 newKey = template.key + "_imported_" + counter;
                 counter++;
             }
             
             template.key = newKey;
+            existingKeysSet.add(newKey); // Add to set to avoid conflicts in this batch
             list.push(template);
             importCount++;
         }
