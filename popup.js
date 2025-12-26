@@ -365,6 +365,10 @@ document.onload = function () {
 
 // Helper function to compress data using gzip
 async function compressData(data) {
+    // Check if CompressionStream is supported
+    if (typeof CompressionStream === 'undefined') {
+        throw new Error('您的浏览器不支持数据压缩功能，请使用最新版本的 Chrome、Edge 或 Firefox 浏览器');
+    }
     const blob = new Blob([data], { type: 'application/json' });
     const stream = blob.stream();
     const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
@@ -374,6 +378,10 @@ async function compressData(data) {
 
 // Helper function to decompress gzip data
 async function decompressData(compressedBlob) {
+    // Check if DecompressionStream is supported
+    if (typeof DecompressionStream === 'undefined') {
+        throw new Error('您的浏览器不支持数据解压功能，请使用最新版本的 Chrome、Edge 或 Firefox 浏览器');
+    }
     const stream = compressedBlob.stream();
     const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
     const decompressedBlob = await new Response(decompressedStream).blob();
@@ -465,7 +473,7 @@ document.getElementById("exportConfirmBtn").addEventListener("click", async func
             var url = URL.createObjectURL(compressedBlob);
             var a = document.createElement("a");
             a.href = url;
-            var timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            var timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace(/\.\d{3}Z$/, '');
             a.download = "form-templates-" + timestamp + ".gz";
             document.body.appendChild(a);
             a.click();
@@ -523,19 +531,19 @@ document.getElementById("importFile").addEventListener("change", async function 
         for (var i = 0; i < importedTemplates.length; i++) {
             var template = importedTemplates[i];
             // Check if template with same key already exists
-            var exists = list.some(function (item) {
-                return item.key === template.key;
-            });
+            var existingKeys = list.map(function(item) { return item.key; });
+            var newKey = template.key;
+            var counter = 1;
             
-            if (!exists) {
-                list.push(template);
-                importCount++;
-            } else {
-                // Generate new key for duplicate
-                template.key = getCacheKey() + "_imported";
-                list.push(template);
-                importCount++;
+            // Keep generating new keys until we find one that doesn't exist
+            while (existingKeys.indexOf(newKey) !== -1) {
+                newKey = template.key + "_imported_" + counter;
+                counter++;
             }
+            
+            template.key = newKey;
+            list.push(template);
+            importCount++;
         }
         
         localStorage.list = JSON.stringify(list);
