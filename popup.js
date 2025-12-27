@@ -14,6 +14,50 @@ function showMessage(text, type) {
     }, 3000);
 }
 
+// Custom Prompt Logic
+var promptCallback = null;
+var promptOverlay = document.getElementById('customPromptOverlay');
+var promptInput = document.getElementById('promptInput');
+var promptConfirmBtn = document.getElementById('promptConfirmBtn');
+var promptCancelBtn = document.getElementById('promptCancelBtn');
+
+function showPrompt(defaultValue, callback) {
+    promptInput.value = defaultValue || '';
+    promptCallback = callback;
+    promptOverlay.style.display = 'flex';
+    promptInput.focus();
+    promptInput.select();
+}
+
+function closePrompt() {
+    promptOverlay.style.display = 'none';
+    promptCallback = null;
+}
+
+promptConfirmBtn.addEventListener('click', function () {
+    var value = promptInput.value.trim();
+    if (!value) {
+        showMessage("请输入名称", "error");
+        promptInput.focus();
+        return;
+    }
+    if (promptCallback) {
+        promptCallback(value);
+    }
+    closePrompt();
+});
+
+promptCancelBtn.addEventListener('click', closePrompt);
+
+// Handle Enter key in input
+promptInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+        promptConfirmBtn.click();
+    } else if (e.key === 'Escape') {
+        closePrompt();
+    }
+});
+
 document.getElementById("log").addEventListener("click", function () {
     //console.log('abc' + new Date().getTime());
     sendmsg();
@@ -112,33 +156,30 @@ function renderForms(list) {
         div.classList.add("desc");
         var btn = document.createElement("button");
         div.innerHTML = gettxt(list[i]);
-        btn.textContent = "保存";
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> 保存';
         var key = getCacheKey() + i;
         cache[key] = list[i];
         btn.setAttribute("data", key);
         btn.addEventListener("click", function (e) {
 
-            var key = e.target.getAttribute("data");
+            var key = this.getAttribute("data");
             var data = cache[key];
-            var name = prompt("请输入保存名称", data.titlename || "");
-            if (!name) {
-                alert("请输入保存名称");
-                return;
-            }
-            var list = localStorage.list;
-            if (list) {
-                list = JSON.parse(list);
-            } else {
-                list = [];
-            }
-            data.key = key;
-            data.title = name;
-            list.push(data);
-            localStorage.list = JSON.stringify(list);
-            showMessage("保存成功", "success");
-            setTimeout(function () {
-                location.reload();
-            }, 1000);
+            showPrompt(data.titlename || "", function (name) {
+                var list = localStorage.list;
+                if (list) {
+                    list = JSON.parse(list);
+                } else {
+                    list = [];
+                }
+                data.key = key;
+                data.title = name;
+                list.push(data);
+                localStorage.list = JSON.stringify(list);
+                showMessage("保存成功", "success");
+                setTimeout(function () {
+                    location.reload();
+                }, 1000);
+            });
         });
         li.appendChild(div);
         li.appendChild(btn);
@@ -282,7 +323,7 @@ function edit(data) {
 }
 var btn3 = document.getElementById("btn3");
 btn3.addEventListener("click", function (e) {
-    var key = e.target.getAttribute("data");
+    var key = this.getAttribute("data");
     var list = localStorage.list;
     if (list) {
         list = JSON.parse(list);
@@ -313,13 +354,13 @@ function init() {
             div.classList.add("desc");
             var btn = document.createElement("button");
             div.textContent = list[i].title;
-            btn.textContent = "填充";
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> 填充';
             btn.setAttribute("data", list[i].key);
             var editbtn = document.createElement("button");
-            editbtn.textContent = "编辑";
+            editbtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 编辑';
             editbtn.setAttribute("data", list[i].key);
             editbtn.addEventListener("click", function (e) {
-                var key = e.target.getAttribute("data");
+                var key = this.getAttribute("data");
                 var list = localStorage.list;
                 if (list) {
                     list = JSON.parse(list);
@@ -334,10 +375,10 @@ function init() {
             });
 
             var delbtn = document.createElement("button");
-            delbtn.textContent = "删除";
+            delbtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> 删除';
             delbtn.setAttribute("data", list[i].key);
             delbtn.addEventListener("click", function (e) {
-                var key = e.target.getAttribute("data");
+                var key = this.getAttribute("data");
                 var list = localStorage.list;
                 if (list) {
                     list = JSON.parse(list);
@@ -353,7 +394,7 @@ function init() {
                 }
             });
             btn.addEventListener("click", function (e) {
-                var key = e.target.getAttribute("data");
+                var key = this.getAttribute("data");
                 var list = localStorage.list;
                 if (list) {
                     list = JSON.parse(list);
@@ -618,11 +659,14 @@ document.getElementById("importFile").addEventListener("change", async function 
 // More actions button handler
 document.getElementById("moreActionsBtn").addEventListener("click", function () {
     var div = document.getElementById("moreActionsDiv");
+    var svgUp = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><polyline points="18 15 12 9 6 15"/></svg>';
+    var svgDown = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;"><polyline points="6 9 12 15 18 9"/></svg>';
+
     if (div.style.display === "none") {
         div.style.display = "flex";
-        this.textContent = "更多操作 ▲";
+        this.innerHTML = "更多操作 " + svgUp;
     } else {
         div.style.display = "none";
-        this.textContent = "更多操作 ▼";
+        this.innerHTML = "更多操作 " + svgDown;
     }
 });
