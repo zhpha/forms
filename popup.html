@@ -101,7 +101,8 @@
 
         /* 主按钮 (保存模板, 保存) */
         #log,
-        #btn3 {
+        #btn3,
+        #exportConfirmBtn {
             background-color: #007bff;
             color: white;
             box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
@@ -114,22 +115,33 @@
             /* 编辑页按钮恢复自适应 */
         }
 
+        #div4 #exportConfirmBtn {
+            width: auto;
+        }
+
         #log:hover,
-        #btn3:hover {
+        #btn3:hover,
+        #exportConfirmBtn:hover {
             background-color: #0069d9;
             box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
         }
 
         /* 次级按钮 (返回, 取消) */
         #fanhui,
-        #btn4 {
+        #btn4,
+        #exportCancelBtn,
+        #exportBtn,
+        #importBtn {
             background-color: #fff;
             color: #495057;
             border: 1px solid #ced4da;
         }
 
         #fanhui:hover,
-        #btn4:hover {
+        #btn4:hover,
+        #exportCancelBtn:hover,
+        #exportBtn:hover,
+        #importBtn:hover {
             background-color: #f8f9fa;
             border-color: #adb5bd;
             color: #212529;
@@ -255,6 +267,11 @@
 
     <div id="div1">
         <button id="log">查找表单</button>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button id="exportBtn" style="flex: 1;">导出模板</button>
+            <button id="importBtn" style="flex: 1;">导入模板</button>
+        </div>
+        <input type="file" id="importFile" accept=".gz" style="display: none;">
         <p class="title">已保存的表单</p>
         <ul id="list">
             <li style="text-align: center; color: #999; border: 1px dashed #ccc; box-shadow: none;">未保存表单</li>
@@ -278,6 +295,22 @@
         </div>
         <ul id="list3">
 
+        </ul>
+    </div>
+
+    <div id="div4" style="display: none;">
+        <div class="sticky-header">
+            <button id="exportConfirmBtn">导出</button>
+            <button id="exportCancelBtn">取消</button>
+        </div>
+        <p class="title">选择要导出的模板</p>
+        <div style="margin-bottom: 10px; padding: 8px; background: #e8f0fe; border-radius: 4px;">
+            <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" id="selectAllCheckbox" checked style="margin-right: 8px;">
+                <span style="font-weight: 500;">全选/取消全选</span>
+            </label>
+        </div>
+        <ul id="exportList">
         </ul>
     </div>
 
