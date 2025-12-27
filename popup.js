@@ -1,5 +1,19 @@
 
 console.log('popup.js' + new Date().getTime());
+
+// 消息提示函数
+function showMessage(text, type) {
+    var toast = document.getElementById("messageToast");
+    if (!toast) return;
+
+    toast.textContent = text;
+    toast.className = "message-toast show " + (type || "success");
+
+    setTimeout(function () {
+        toast.className = "message-toast";
+    }, 3000);
+}
+
 document.getElementById("log").addEventListener("click", function () {
     //console.log('abc' + new Date().getTime());
     sendmsg();
@@ -47,65 +61,90 @@ function gettxt(data) {
 }
 function sendmsg() {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-        chrome.tabs.sendMessage(
-            tabs[0].id,
-            {
-                "msg": "getform"
-            },
-            function (response) {
-                console.log(response);
-                var list = response.data;
-                var ul = document.getElementById("list2");
-                showdiv("div2");
+        var currentTabId = tabs[0].id;
 
+        // 使用 webNavigation 获取所有 frame
+        chrome.webNavigation.getAllFrames({ tabId: currentTabId }, function (frames) {
+            var allForms = [];
+            var processedCount = 0;
+            var totalFrames = frames ? frames.length : 0;
 
-                if (list.length > 0) {
-                    ul.innerHTML = "";
-                } else {
-                    ul.innerHTML = "<li>未发现表单</li>";
-
-                }
-                for (var i = 0; i < list.length; i++) {
-                    var li = document.createElement("li");
-                    var div = document.createElement("div");
-                    div.classList.add("desc");
-                    var btn = document.createElement("button");
-                    div.innerHTML = gettxt(list[i]);
-                    btn.textContent = "保存";
-                    var key = getCacheKey() + i;
-                    cache[key] = list[i];
-                    btn.setAttribute("data", key);
-                    btn.addEventListener("click", function (e) {
-
-                        var key = e.target.getAttribute("data");
-                        var data = cache[key];
-                        var name = prompt("请输入保存名称", data.titlename || "");
-                        if (!name) {
-                            alert("请输入保存名称");
-                            return;
-                        }
-                        var list = localStorage.list;
-                        if (list) {
-                            list = JSON.parse(list);
-                        } else {
-                            list = [];
-                        }
-                        data.key = key;
-                        data.title = name;
-                        list.push(data);
-                        localStorage.list = JSON.stringify(list);
-                        alert("保存成功");
-                        location.reload();
-                    });
-                    li.appendChild(div);
-                    li.appendChild(btn);
-
-                    ul.appendChild(li);
-                }
-
+            if (totalFrames === 0) {
+                renderForms([]);
+                return;
             }
-        );
+
+            frames.forEach(function (frame) {
+                chrome.tabs.sendMessage(
+                    currentTabId,
+                    { "msg": "getform" },
+                    { frameId: frame.frameId },
+                    function (response) {
+                        processedCount++;
+
+                        if (!chrome.runtime.lastError && response && response.data) {
+                            allForms = allForms.concat(response.data);
+                        }
+
+                        if (processedCount === totalFrames) {
+                            renderForms(allForms);
+                        }
+                    }
+                );
+            });
+        });
     });
+}
+
+function renderForms(list) {
+    var ul = document.getElementById("list2");
+    showdiv("div2");
+
+    if (list.length > 0) {
+        ul.innerHTML = "";
+    } else {
+        ul.innerHTML = "<li>未发现表单</li>";
+    }
+
+    for (var i = 0; i < list.length; i++) {
+        var li = document.createElement("li");
+        var div = document.createElement("div");
+        div.classList.add("desc");
+        var btn = document.createElement("button");
+        div.innerHTML = gettxt(list[i]);
+        btn.textContent = "保存";
+        var key = getCacheKey() + i;
+        cache[key] = list[i];
+        btn.setAttribute("data", key);
+        btn.addEventListener("click", function (e) {
+
+            var key = e.target.getAttribute("data");
+            var data = cache[key];
+            var name = prompt("请输入保存名称", data.titlename || "");
+            if (!name) {
+                alert("请输入保存名称");
+                return;
+            }
+            var list = localStorage.list;
+            if (list) {
+                list = JSON.parse(list);
+            } else {
+                list = [];
+            }
+            data.key = key;
+            data.title = name;
+            list.push(data);
+            localStorage.list = JSON.stringify(list);
+            showMessage("保存成功", "success");
+            setTimeout(function () {
+                location.reload();
+            }, 1000);
+        });
+        li.appendChild(div);
+        li.appendChild(btn);
+
+        ul.appendChild(li);
+    }
 }
 function edit(data) {
     showdiv("div3");
@@ -251,7 +290,7 @@ btn3.addEventListener("click", function (e) {
             if (list[i].key == key) {
                 list[i].data = cache.data.data;
                 localStorage.list = JSON.stringify(list);
-                alert("保存成功");
+                showMessage("保存成功", "success");
                 break;
             }
         }
@@ -309,6 +348,7 @@ function init() {
                         }
                     }
                     localStorage.list = JSON.stringify(list);
+                    showMessage("删除成功", "success");
                     init();
                 }
             });
@@ -321,16 +361,26 @@ function init() {
                         if (list[i].key == key) {
                             var data = list[i];
                             chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-                                chrome.tabs.sendMessage(
-                                    tabs[0].id,
-                                    {
-                                        "msg": "fillform",
-                                        "data": data
-                                    },
-                                    function (response) {
-                                        console.log(response);
-                                    }
-                                );
+                                var currentTabId = tabs[0].id;
+                                chrome.webNavigation.getAllFrames({ tabId: currentTabId }, function (frames) {
+                                    if (!frames) return;
+                                    frames.forEach(function (frame) {
+                                        chrome.tabs.sendMessage(
+                                            currentTabId,
+                                            {
+                                                "msg": "fillform",
+                                                "data": data
+                                            },
+                                            { frameId: frame.frameId },
+                                            function (response) {
+                                                if (chrome.runtime.lastError) {
+                                                    // Ignore errors
+                                                }
+                                                // console.log(response);
+                                            }
+                                        );
+                                    });
+                                });
                             });
                             break;
                         }
@@ -406,30 +456,30 @@ function showExportDialog() {
         list = JSON.parse(list);
         var exportList = document.getElementById("exportList");
         exportList.innerHTML = "";
-        
+
         for (var i = 0; i < list.length; i++) {
             var li = document.createElement("li");
             var label = document.createElement("label");
             label.style.display = "flex";
             label.style.alignItems = "center";
             label.style.cursor = "pointer";
-            
+
             var checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.checked = true;
             checkbox.classList.add("export-checkbox");
             checkbox.setAttribute("data-key", list[i].key);
-            
+
             var span = document.createElement("span");
             span.textContent = list[i].title;
             span.style.marginLeft = "8px";
-            
+
             label.appendChild(checkbox);
             label.appendChild(span);
             li.appendChild(label);
             exportList.appendChild(li);
         }
-        
+
         showdiv("div4");
     }
 }
@@ -446,18 +496,18 @@ document.getElementById("selectAllCheckbox").addEventListener("change", function
 document.getElementById("exportConfirmBtn").addEventListener("click", async function () {
     var checkboxes = document.querySelectorAll(".export-checkbox");
     var selectedKeys = [];
-    
+
     for (var i = 0; i < checkboxes.length; i++) {
         if (checkboxes[i].checked) {
             selectedKeys.push(checkboxes[i].getAttribute("data-key"));
         }
     }
-    
+
     if (selectedKeys.length === 0) {
         alert("请至少选择一个模板");
         return;
     }
-    
+
     var list = localStorage.list;
     if (list) {
         list = JSON.parse(list);
@@ -466,11 +516,11 @@ document.getElementById("exportConfirmBtn").addEventListener("click", async func
         var selectedTemplates = list.filter(function (item) {
             return selectedKeysSet.has(item.key);
         });
-        
+
         try {
             var jsonData = JSON.stringify(selectedTemplates);
             var compressedBlob = await compressData(jsonData);
-            
+
             // Create download link
             var url = URL.createObjectURL(compressedBlob);
             var a = document.createElement("a");
@@ -482,17 +532,20 @@ document.getElementById("exportConfirmBtn").addEventListener("click", async func
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
-            alert("导出成功！共导出 " + selectedTemplates.length + " 个模板");
+
+            showMessage("导出成功！共导出 " + selectedTemplates.length + " 个模板", "success");
             showdiv("div1");
         } catch (e) {
             console.error(e);
-            alert("导出失败：" + e.message);
+            showMessage("导出失败：" + e.message, "error");
+
+            // Export cancel button handler
+
         }
     }
-});
+}
+);
 
-// Export cancel button handler
 document.getElementById("exportCancelBtn").addEventListener("click", function () {
     showdiv("div1");
 });
@@ -508,57 +561,68 @@ document.getElementById("importFile").addEventListener("change", async function 
     if (!file) {
         return;
     }
-    
+
     if (!file.name.endsWith('.gz')) {
         alert("请选择 .gz 格式的文件");
         e.target.value = "";
         return;
     }
-    
+
     try {
         var decompressedData = await decompressData(file);
         var importedTemplates = JSON.parse(decompressedData);
-        
+
         if (!Array.isArray(importedTemplates)) {
             throw new Error("无效的数据格式");
         }
-        
+
         var list = localStorage.list;
         if (list) {
             list = JSON.parse(list);
         } else {
             list = [];
         }
-        
+
         // Create Set of existing keys for O(1) lookup performance
-        var existingKeysSet = new Set(list.map(function(item) { return item.key; }));
-        
+        var existingKeysSet = new Set(list.map(function (item) { return item.key; }));
+
         var importCount = 0;
         for (var i = 0; i < importedTemplates.length; i++) {
             var template = importedTemplates[i];
             var newKey = template.key;
             var counter = 1;
-            
+
             // Keep generating new keys until we find one that doesn't exist
             while (existingKeysSet.has(newKey)) {
                 newKey = template.key + "_imported_" + counter;
                 counter++;
             }
-            
+
             template.key = newKey;
             existingKeysSet.add(newKey); // Add to set to avoid conflicts in this batch
             list.push(template);
             importCount++;
         }
-        
+
         localStorage.list = JSON.stringify(list);
-        alert("导入成功！共导入 " + importCount + " 个模板");
+        showMessage("导入成功！共导入 " + importCount + " 个模板", "success");
         init();
     } catch (e) {
         console.error(e);
-        alert("导入失败：" + e.message);
+        showMessage("导入失败：" + e.message, "error");
     }
-    
+
     e.target.value = "";
 });
 
+// More actions button handler
+document.getElementById("moreActionsBtn").addEventListener("click", function () {
+    var div = document.getElementById("moreActionsDiv");
+    if (div.style.display === "none") {
+        div.style.display = "flex";
+        this.textContent = "更多操作 ▲";
+    } else {
+        div.style.display = "none";
+        this.textContent = "更多操作 ▼";
+    }
+});

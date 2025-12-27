@@ -3,42 +3,29 @@
 var formTemplates = {};
 
 // 定义一个函数，用于查找当前页面上的所有表单元素
-function findForms(win) {
-    var win = win || window;
+function findForms() {
     // 获取当前页面的文档对象
-    var document = win.document || win.contentDocument
+    var doc = document;
+
     // 获取当前页面上的所有表单元素
-    var forms = document.getElementsByTagName("form");
+    var forms = doc.getElementsByTagName("form");
     var list = [];
-    var title = document.title;
-    var page = win.location.pathname;
+    var title = doc.title;
+    // 如果在iframe中，title可能为空，可以使用location.href或者父级title
+    if (!title && window.location.href) {
+        title = window.location.href;
+    }
+
+    var page = window.location.pathname;
+
     // 遍历所有的表单元素
     for (var i = 0; i < forms.length; i++) {
-
         var form = forms[i];
         form.titlename = title;
         form.page = page;
+        // 标记是否在 iframe 中
+        form.isIframe = (window.self !== window.top);
         list.push(form);
-
-    }
-    // 获取当前页面上的所有内嵌框架
-    var iframes = document.getElementsByTagName("iframe");
-    // 遍历所有的内嵌框架
-    for (var i = 0; i < iframes.length; i++) {
-        // 获取当前内嵌框架
-        var iframe = iframes[i];
-        // 获取内嵌框架的文档对象
-        //var iframeDocument = iframe.contentDocument;
-        // 获取内嵌框架中的表单元素
-        // var iframeForms = iframeDocument.getElementsByTagName("form");
-        // // 将内嵌框架中的表单元素添加到表单元素数组中
-        // for (var j = 0; j < iframeForms.length; j++) {
-        //     list.push(iframeForms[j]);
-        // }
-        var ls = findForms(iframe.contentWindow);
-        if (ls && ls.length > 0) {
-            list = list.concat(ls);
-        }
     }
 
     // 返回表单元素的数组
@@ -111,6 +98,7 @@ function fillForm(form, template) {
                     if (item.type == "hidden") {
                         if (item.writeable === true) {
                             input.value = item.value;
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
                         }
                     } else {
                         if (item.suiji && item.suiji.length) {
@@ -120,6 +108,7 @@ function fillForm(form, template) {
                         } else {
                             input.value = item.value;
                         }
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
                     }
 
                 } else {
@@ -137,9 +126,15 @@ function fillForm(form, template) {
 console.log(location.pathname);
 //chrome.browserAction.onClicked.addListener(init);
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    console.log(request, sender, sendResponse);
+    // console.log(request, sender, sendResponse);
     if (request.msg == 'getform') {
         var forms = findForms();
+        // 如果当前 frame 没有表单，直接返回空，避免干扰
+        if (forms.length === 0) {
+            sendResponse({ msg: 'getform', data: [] });
+            return;
+        }
+
         formTemplates = {};
         var list = [];
         for (var i = 0; i < forms.length; i++) {
@@ -150,35 +145,87 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             fobj.titlename = form.titlename;
             fobj.page = form.page;
             fobj.index = i;
+            fobj.url = window.location.href; // 增加 frame 标识
             var data = getformdata(form);
             fobj.data = data;
             list.push(fobj);
-            // formTemplates[formId] = formTemplates[formId] || {};
-            // formTemplates[formId].form = form;
         }
         var msg = { msg: 'getform', data: list };
-        console.log(msg);
+        // console.log(msg);
         sendResponse(msg);
     } else if (request.msg == 'fillform') {
         var forms = findForms();
         var data = request.data;
-        var form = null;
-        if (data.id) {
-            form = forms.filter(function (item) {
-                return item.id == data.id && item.page == data.page;
-            })[0];
+
+        // 增加判断：如果数据中包含 url，且与当前 frame url 不匹配，则忽略
+        // 修改：只比较 origin + pathname，忽略参数(?...)和哈希(#...)
+        // 进一步修改：如果 pathname 中的某一段纯数字不同，也视为匹配（视为动态ID）
+        if (data.url) {
+            try {
+                var currentUrlObj = new URL(window.location.href);
+                var savedUrlObj = new URL(data.url);
+
+                // 1. 比较 Origin (协议 + 域名 + 端口)
+                if (currentUrlObj.origin !== savedUrlObj.origin) {
+                    sendResponse({ msg: 'fillform', data: 'not_match_frame' });
+                    return;
+                }
+
+                // 2. 比较 Pathname，允许数字段不同
+                var currentSegments = currentUrlObj.pathname.split('/');
+                var savedSegments = savedUrlObj.pathname.split('/');
+
+                if (currentSegments.length !== savedSegments.length) {
+                    sendResponse({ msg: 'fillform', data: 'not_match_frame' });
+                    return;
+                }
+
+                for (var i = 0; i < currentSegments.length; i++) {
+                    var cSeg = currentSegments[i];
+                    var sSeg = savedSegments[i];
+
+                    if (cSeg !== sSeg) {
+                        // 如果不相等，检查是否都是纯数字
+                        var isCNumeric = /^\d+$/.test(cSeg);
+                        var isSNumeric = /^\d+$/.test(sSeg);
+
+                        // 只要有一方不是数字，则认为不匹配
+                        if (!isCNumeric || !isSNumeric) {
+                            sendResponse({ msg: 'fillform', data: 'not_match_frame' });
+                            return;
+                        }
+                    }
+
+                }
+            } catch (e) {
+                // URL 解析失败，回退到严格全等匹配
+                if (data.url !== window.location.href) {
+                    sendResponse({ msg: 'fillform', data: 'not_match_frame' });
+                    return;
+                }
+            }
+
+            var form = null;
+            if (data.id) {
+                form = forms.filter(function (item) {
+                    return item.id == data.id;
+                })[0];
+            }
+            if (!form && data.name) {
+                form = forms.filter(function (item) {
+                    return item.name == data.name;
+                })[0];
+            }
+            if (!form && typeof data.index !== 'undefined') {
+                form = forms[data.index];
+            }
+
+            if (form) {
+                fillForm(form, data);
+                sendResponse({ msg: 'fillform', data: 'ok' });
+            } else {
+                sendResponse({ msg: 'fillform', data: 'not_found' });
+            }
         }
-        if (!form && data.name) {
-            form = forms.filter(function (item) {
-                return item.name == data.name && item.page == data.page;
-            })[0];
-        }
-        if (!form) {
-            form = forms[data.index];
-        }
-        if (form) {
-            fillForm(form, data);
-        }
-        sendResponse({ msg: 'fillform', data: 'ok' });
     }
 });
